@@ -7,7 +7,10 @@ if __name__ == "__main__":
 
     logger = Logger()
     cfg = Config(logger)
-    db = DbInteractor(logger, cfg)
+    try:
+        db = DbInteractor(logger, cfg)
+    finally:
+        db.close_all_connections()
 
 
 

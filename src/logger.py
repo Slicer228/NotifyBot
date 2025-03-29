@@ -6,7 +6,7 @@ class Logger(logging.Logger):
 
     def __init__(self):
         super().__init__('prod', logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         file_handler = RotatingFileHandler(
             'logs.log',
             maxBytes=10 * 1024 * 1024,
