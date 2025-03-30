@@ -1,4 +1,4 @@
-
+import sys
 
 if __name__ == "__main__":
     from src.config import Config
@@ -10,7 +10,10 @@ if __name__ == "__main__":
     try:
         db = DbInteractor(logger, cfg)
     finally:
-        db.close_all_connections()
+        try:
+            db.close_all_connections()
+        except:
+            sys.exit(1)
 
 
 
