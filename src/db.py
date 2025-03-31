@@ -14,6 +14,7 @@ from src.config import Config
 from src.validator import Task
 
 
+s = threading.Semaphore(1)
 _LOCK = threading.Lock()
 
 
@@ -40,6 +41,7 @@ class DbInteractor:
             conn.execute(
                 """
                     CREATE TABLE IF NOT EXISTS `tasks` (
+                        `task_id` INTEGER AUTO_INCREMENT PRIMARY KEY,
                         `user_id` INTEGER NOT NULL,
                         `week_day` INTEGER NOT NULL,
                         `time` TEXT NOT NULL,
@@ -103,7 +105,11 @@ class DbFetcher:
 
     @staticmethod
     @user_activity
-    def set_user(user_id: int, connection: sqlite3.Connection, logger: Logger) -> None:
+    def set_user(
+            user_id: int,
+            logger: Logger,
+            connection: sqlite3.Connection = None
+    ) -> None:
         try:
             stmt = """
                 INSERT INTO users (user_id) VALUES(?)
@@ -117,7 +123,11 @@ class DbFetcher:
 
     @staticmethod
     @user_activity
-    def set_new_task(task: Task, connection: sqlite3.Connection, logger: Logger) -> None:
+    def set_new_task(
+                task: Task,
+                logger: Logger,
+                connection: sqlite3.Connection = None
+            ) -> None:
         try:
             stmt = """
                 INSERT INTO tasks(user_id, week_day, time, description) VALUES(?, ?, ?, ?)
@@ -129,7 +139,11 @@ class DbFetcher:
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при добавлении задачи')
 
     @staticmethod
-    def get_all_tasks(user_id: int, connection: sqlite3.Connection, logger: Logger) -> List[Task]:
+    def get_all_tasks(
+            user_id: int,
+            logger: Logger,
+            connection: sqlite3.Connection = None
+    ) -> List[Task]:
         try:
             stmt = """
                 SELECT * FROM tasks
@@ -145,10 +159,11 @@ class DbFetcher:
         try:
             data = list(map(
                 lambda x: Task(
-                    user_id=x[0],
-                    week_day=x[1],
-                    time=x[2],
-                    description=x[3],
+                    task_id=x[0],
+                    user_id=x[1],
+                    week_day=x[2],
+                    time=x[3],
+                    description=x[4],
                 ),
                 data
             ))
@@ -161,8 +176,8 @@ class DbFetcher:
     def is_updated_recently(
             user_id: int,
             last_update: datetime.datetime,
-            connection: sqlite3.Connection,
-            logger: Logger
+            logger: Logger,
+            connection: sqlite3.Connection = None
     ) -> bool:
         stmt = """
             SELECT last_update FROM users

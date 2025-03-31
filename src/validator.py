@@ -24,6 +24,7 @@ WeekDays = Literal[
 
 
 class Task(BaseModel):
+    task_id: int
     user_id: int
     week_day: WeekDays
     time: int
