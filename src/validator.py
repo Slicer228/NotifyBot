@@ -40,4 +40,4 @@ class Task(BaseModel):
 
 class User(BaseModel):
     user_id: int
-    last_update: datetime.datetime
+    username: str

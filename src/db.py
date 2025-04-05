@@ -1,21 +1,17 @@
 import asyncio
-import datetime
-import os.path
 import sqlite3
 import sys
-import threading
 from time import sleep
 from typing import List
 import aiosqlite
 from pydantic import ValidationError
-from src.exc import DatabaseError, InternalValidationError, ExternalError
+from src.exc import DatabaseError, InternalValidationError, ExternalError, InternalError
 from src.logger import Logger
 from src.config import Config
 from src.validator import Task
 
 
-s = threading.Semaphore(1)
-_LOCK = threading.Lock()
+_LOCK = asyncio.Lock()
 
 
 class DbInteractor:
@@ -29,12 +25,12 @@ class DbInteractor:
             self._connection_pool = list()
             self._connection_pool_in_use = list()
             for _ in range(int(self._cfg.DB_CONN_POOL_LIMIT)):
-                self._connection_pool.append(sqlite3.connect(self._cfg.DB_NAME))
+                self._connection_pool.append(aiosqlite.connect(self._cfg.DB_NAME))
             conn.execute(
                 """
                     CREATE TABLE IF NOT EXISTS `users` (
                         `user_id` INTEGER NOT NULL UNIQUE,
-                        `last_update` REAL NOT NULL
+                        `username` TEXT NOT NULL
                     );
                 """
             )
@@ -57,85 +53,102 @@ class DbInteractor:
             self.close_all_connections()
             sys.exit(1)
 
-    def get_connection(self) -> sqlite3.Connection | None:
+    async def get_connection(self) -> aiosqlite.Connection | None:
         try:
             while True:
                 if not self._connection_pool:
                     sleep(0.01)
                 else:
-                    _LOCK.acquire()
-                    conn = self._connection_pool.pop(0)
-                    self._connection_pool_in_use.append(conn)
-                    _LOCK.release()
-                    break
+                    async with _LOCK:
+                        conn = self._connection_pool.pop(0)
+                        self._connection_pool_in_use.append(conn)
+                        break
 
             yield conn
         except BaseException as e:
             self._logger.error(e)
         finally:
-            _LOCK.acquire()
-            self._connection_pool.append(conn)
-            self._connection_pool_in_use.remove(conn)
-            _LOCK.release()
+            async with _LOCK:
+                self._connection_pool.append(conn)
+                self._connection_pool_in_use.remove(conn)
 
     def close_all_connections(self) -> None:
-        for conn in self._connection_pool + self._connection_pool_in_use:
-            conn.close()
-        self._connection_pool.clear()
-        self._connection_pool_in_use.clear()
+        async def close_conns():
+            for conn in self._connection_pool:
+                await conn.close()
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.run_until_complete(close_conns())
+            self._connection_pool.clear()
+            self._connection_pool_in_use.clear()
+        except RuntimeError:
+            try:
+                asyncio.run(close_conns())
+                self._connection_pool.clear()
+                self._connection_pool_in_use.clear()
+            except BaseException as e:
+                self._logger.error(e)
+                raise InternalError('Error while closing connections')
 
 
-class DbFetcher:
+class DbFetcher(DbInteractor):
 
-    @staticmethod
-    def set_user(
-            user_id: int,
-            logger: Logger,
-            connection: sqlite3.Connection = None
+    async def set_user(
+            self,
+            user_id: int
     ) -> None:
         try:
-            stmt = """
-                INSERT INTO users (user_id) VALUES(?)
-            """
+            async with self.get_connection() as conn:
+                stmt = """
+                    SELECT * FROM users
+                    WHERE user_id = ?
+                """
 
-            connection.execute(stmt, [user_id])
-            connection.commit()
+                cur = await conn.execute(stmt, (user_id,))
+                row = await cur.fetchone()
+                if not row:
+                    raise ExternalError('User already exists')
+
+                stmt = """
+                    INSERT INTO users (user_id) VALUES(?)
+                """
+
+                await conn.execute(stmt, [user_id])
+                await conn.commit()
         except Exception as e:
-            logger.error(e)
+            self._logger.error(e)
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при добавлении пользователя')
 
-    @staticmethod
-    def set_new_task(
-                task: Task,
-                logger: Logger,
-                connection: sqlite3.Connection = None
+    async def set_new_task(
+                self,
+                task: Task
             ) -> None:
         try:
             stmt = """
                 INSERT INTO tasks(user_id, week_day, time, description) VALUES(?, ?, ?, ?)
             """
-            connection.execute(stmt, *task)
-            connection.commit()
+            async with self.get_connection() as conn:
+                await conn.execute(stmt, *task)
+                await conn.commit()
         except Exception as e:
-            logger.error(e)
+            self._logger.error(e)
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при добавлении задачи')
 
-    @staticmethod
-    def get_all_tasks(
+    async def get_all_tasks(
+            self,
             user_id: int,
-            logger: Logger,
-            connection: sqlite3.Connection = None
     ) -> List[Task]:
         try:
             stmt = """
                 SELECT * FROM tasks
                 WHERE user_id=?
             """
-
-            cur: sqlite3.Cursor = connection.execute(stmt, [user_id])
-            data = cur.fetchall()
+            async with self.get_connection() as conn:
+                cur: aiosqlite.Cursor = await conn.execute(stmt, [user_id])
+                data = await cur.fetchall()
         except Exception as e:
-            logger.error(e)
+            self._logger.error(e)
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при получении задач')
 
         try:
@@ -151,7 +164,7 @@ class DbFetcher:
             ))
             return data
         except ValidationError as e:
-            logger.error(e)
+            self._logger.error(e)
             raise InternalValidationError('Ошибка в полученных данных')
 
 
