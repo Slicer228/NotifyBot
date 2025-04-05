@@ -8,10 +8,10 @@ from pydantic import ValidationError
 from src.exc import DatabaseError, InternalValidationError, ExternalError, InternalError
 from src.logger import Logger
 from src.config import Config
-from src.validator import Task
+from src.validator import Task, User
 
 
-_LOCK = asyncio.Lock()
+LOCK = asyncio.Lock()
 
 
 class DbInteractor:
@@ -59,7 +59,7 @@ class DbInteractor:
                 if not self._connection_pool:
                     sleep(0.01)
                 else:
-                    async with _LOCK:
+                    async with LOCK:
                         conn = self._connection_pool.pop(0)
                         self._connection_pool_in_use.append(conn)
                         break
@@ -68,7 +68,7 @@ class DbInteractor:
         except BaseException as e:
             self._logger.error(e)
         finally:
-            async with _LOCK:
+            async with LOCK:
                 self._connection_pool.append(conn)
                 self._connection_pool_in_use.remove(conn)
 
@@ -96,7 +96,7 @@ class DbFetcher(DbInteractor):
 
     async def set_user(
             self,
-            user_id: int
+            user: User
     ) -> None:
         try:
             async with self.get_connection() as conn:
@@ -105,16 +105,16 @@ class DbFetcher(DbInteractor):
                     WHERE user_id = ?
                 """
 
-                cur = await conn.execute(stmt, (user_id,))
+                cur = await conn.execute(stmt, (user.user_id,))
                 row = await cur.fetchone()
                 if not row:
                     raise ExternalError('User already exists')
 
                 stmt = """
-                    INSERT INTO users (user_id) VALUES(?)
+                    INSERT INTO users (user_id, username) VALUES(?, ?)
                 """
 
-                await conn.execute(stmt, [user_id])
+                await conn.execute(stmt, [user.user_id, user.username])
                 await conn.commit()
         except Exception as e:
             self._logger.error(e)
@@ -166,6 +166,16 @@ class DbFetcher(DbInteractor):
         except ValidationError as e:
             self._logger.error(e)
             raise InternalValidationError('Ошибка в полученных данных')
+
+    def get_all_users(self) -> List[User]:
+        with sqlite3.connect(self._cfg.DB_NAME) as conn:
+            cur = conn.execute("""
+                SELECT * FROM users
+            """)
+
+            data = cur.fetchall()
+
+            return [User(user_id=u[0], username=u[1]) for u in data]
 
 
 

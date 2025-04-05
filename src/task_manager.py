@@ -1,5 +1,6 @@
 from typing import Callable, List
-from src.db import DbFetcher, DbInteractor
+import asyncio
+from src.db import DbFetcher, LOCK
 from src.exc import InternalError
 from src.logger import Logger
 from src.validator import User, Task
@@ -9,10 +10,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 class UserTasker:
     __slots__ = ('_logger', '_user', '_tasks', '_db', '_callback', '_scheduler', '_signal')
 
-    def __init__(self, logger: Logger, user: User, db: DbInteractor, callback: Callable):
-        self._db = db
+    def __init__(self, logger: Logger, user: User, callback: Callable, tasks: List[Task]):
         self._logger = logger
-        self._tasks: List[Task] = DbFetcher.get_all_tasks(user.user_id, self._logger, connection=self._db.get_connection())
+        self._tasks: List[Task] = tasks
         self._user = user
         self._callback = callback
         self._scheduler = BackgroundScheduler()
@@ -39,7 +39,7 @@ class UserTasker:
             self._scheduler.add_job(
                 self._callback,
                 'cron',
-                [task.description],
+                [self._user.user_id, task.description],
                 id=str(task.task_id),
                 hour=task.hours,
                 minute=task.minutes,
@@ -59,7 +59,7 @@ class UserTasker:
             self._scheduler.add_job(
                 self._callback,
                 'cron',
-                [task.description],
+                [self._user.user_id, task.description],
                 id=str(task.task_id),
                 hour=task.hours,
                 minute=task.minutes,
@@ -72,17 +72,43 @@ class UserTasker:
 class UserTaskerFarm:
     __slots__ = ('_users', '_logger', '_db')
 
-    def __init__(self, logger: Logger, db: DbInteractor):
+    def __init__(self, logger: Logger, db: DbFetcher):
         self._users = []
         self._logger = logger
         self._db = db
 
-    async def add_user(self, user: User) -> None:
+    async def init_users(self, callback: Callable) -> None:
+        # crucial method when bot is initialazing
+        async def init(users: List[User]):
+            for user in users:
+                self._users.append(UserTasker(
+                    self._logger,
+                    user,
+                    callback,
+                    await self._db.get_all_tasks(user.user_id)
+                ))
+                self._users[-1].start_polling()
+
         try:
-            ...
-        except Exception as e:
-            self._logger.error(e)
-            raise InternalError('Error adding user')
+            loop = asyncio.get_running_loop()
+            loop.run_until_complete(init(self._db.get_all_users()))
+        except RuntimeError:
+            try:
+                asyncio.run(init(self._db.get_all_users()))
+            except BaseException as e:
+                self._logger.error(e)
+                raise InternalError('Error while initializing users')
+
+    async def add_user(self, user: User, callback: Callable) -> None:
+        await self._db.set_user(user)
+        async with LOCK:
+            self._users.append(UserTasker(
+                self._logger,
+                user,
+                callback,
+                await self._db.get_all_tasks(user.user_id)
+            ))
+            self._users[-1].start_polling()
 
     async def add_task(self, user_id: User, task: Task) -> None:
         ...
