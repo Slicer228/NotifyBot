@@ -1,6 +1,6 @@
 from typing import Callable, List
 import asyncio
-from src.db import DbFetcher, LOCK
+from src.db import DbFetcher
 from src.exc import InternalError
 from src.logger import Logger
 from src.validator import User, Task
@@ -70,24 +70,28 @@ class UserTasker:
 
 
 class UserTaskerFarm:
-    __slots__ = ('_users', '_logger', '_db')
+    __slots__ = ('_users', '_user_indexes', '_logger', '_db', '_callback')
 
     def __init__(self, logger: Logger, db: DbFetcher):
-        self._users = []
+        self._user_indexes = dict()
+        self._users: List[UserTasker] = []
         self._logger = logger
         self._db = db
+        self._callback = None
 
     async def init_users(self, callback: Callable) -> None:
         # crucial method when bot is initialazing
+        self._callback = callback
         async def init(users: List[User]):
             for user in users:
                 self._users.append(UserTasker(
                     self._logger,
                     user,
-                    callback,
+                    self._callback,
                     await self._db.get_all_tasks(user.user_id)
                 ))
                 self._users[-1].start_polling()
+                self._user_indexes[user.user_id] = len(self._users) - 1
 
         try:
             loop = asyncio.get_running_loop()
@@ -99,19 +103,33 @@ class UserTaskerFarm:
                 self._logger.error(e)
                 raise InternalError('Error while initializing users')
 
-    async def add_user(self, user: User, callback: Callable) -> None:
+    async def add_user(self, user: User) -> None:
         await self._db.set_user(user)
-        async with LOCK:
-            self._users.append(UserTasker(
-                self._logger,
-                user,
-                callback,
-                await self._db.get_all_tasks(user.user_id)
-            ))
-            self._users[-1].start_polling()
+        self._users.append(UserTasker(
+            self._logger,
+            user,
+            self._callback,
+            await self._db.get_all_tasks(user.user_id)
+        ))
+        self._users[-1].start_polling()
 
-    async def add_task(self, user_id: User, task: Task) -> None:
-        ...
+    async def add_task(self, user: User, task: Task) -> None:
+        if not self._user_indexes.get(user.user_id, None):
+            await self.add_user(user)
+        await self._db.set_new_task(task)
+        self._users[self._user_indexes[user.user_id]].signal(task, 2)
+
+    async def remove_task(self, user: User, task: Task) -> None:
+        if not self._user_indexes.get(user.user_id, None):
+            await self.add_user(user)
+        await self._db.set_new_task(task)
+        self._users[self._user_indexes[user.user_id]].signal(task, 3)
+
+    async def update_task(self, user: User, task: Task) -> None:
+        if not self._user_indexes.get(user.user_id, None):
+            await self.add_user(user)
+        await self._db.set_new_task(task)
+        self._users[self._user_indexes[user.user_id]].signal(task, 1)
 
 
 

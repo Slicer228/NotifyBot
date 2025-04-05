@@ -11,7 +11,7 @@ from src.config import Config
 from src.validator import Task, User
 
 
-LOCK = asyncio.Lock()
+_LOCK = asyncio.Lock()
 
 
 class DbInteractor:
@@ -59,7 +59,7 @@ class DbInteractor:
                 if not self._connection_pool:
                     sleep(0.01)
                 else:
-                    async with LOCK:
+                    async with _LOCK:
                         conn = self._connection_pool.pop(0)
                         self._connection_pool_in_use.append(conn)
                         break
@@ -68,7 +68,7 @@ class DbInteractor:
         except BaseException as e:
             self._logger.error(e)
         finally:
-            async with LOCK:
+            async with _LOCK:
                 self._connection_pool.append(conn)
                 self._connection_pool_in_use.remove(conn)
 
@@ -108,7 +108,7 @@ class DbFetcher(DbInteractor):
                 cur = await conn.execute(stmt, (user.user_id,))
                 row = await cur.fetchone()
                 if not row:
-                    raise ExternalError('User already exists')
+                    return
 
                 stmt = """
                     INSERT INTO users (user_id, username) VALUES(?, ?)
