@@ -1,6 +1,7 @@
 import asyncio
 from typing import Literal
 
+from aiogram.filters import Command
 from aiogram.types import Message
 
 import aiogram
@@ -10,8 +11,7 @@ from src.config import Config
 from src.exc import InternalError
 from src.logger import Logger
 from src.task_manager import UserTaskerFarm
-from src.validator import Task
-
+from src.validator import Task, User
 
 _dp = Dispatcher()
 
@@ -56,9 +56,20 @@ class Bot(aiogram.Bot):
                 raise InternalError('Error in notify level')
 
     def init_routers(self):
-        @_dp.message()
+        @_dp.message(Command('start'))
         async def on_message(message: Message):
-            await message.answer('dsds')
+            try:
+                await self._tasker.add_user(User(
+                    user_id=message.from_user.id,
+                    username=message.from_user.username,
+                ))
+                await message.answer('Welcome to notify bot!')
+            except:
+                await message.answer('Error on start')
+
+        @_dp.message(Command('help'))
+        async def on_message(message: Message):
+            await message.answer('Help msg')
 
     def run(self):
         async def launch(dp: Dispatcher):

@@ -1,6 +1,7 @@
 import asyncio
 import sqlite3
 import sys
+from contextlib import asynccontextmanager
 from time import sleep
 from typing import List
 import aiosqlite
@@ -24,8 +25,13 @@ class DbInteractor:
             conn = sqlite3.connect(self._cfg.DB_NAME)
             self._connection_pool = list()
             self._connection_pool_in_use = list()
-            for _ in range(int(self._cfg.DB_CONN_POOL_LIMIT)):
-                self._connection_pool.append(aiosqlite.connect(self._cfg.DB_NAME))
+
+            async def generate_conns():
+                for _ in range(int(self._cfg.DB_CONN_POOL_LIMIT)):
+                    self._connection_pool.append(await aiosqlite.connect(self._cfg.DB_NAME))
+
+            asyncio.run(generate_conns())
+
             conn.execute(
                 """
                     CREATE TABLE IF NOT EXISTS `users` (
@@ -53,13 +59,14 @@ class DbInteractor:
             self.close_all_connections()
             sys.exit(1)
 
+    @asynccontextmanager
     async def get_connection(self) -> aiosqlite.Connection | None:
         try:
-            while True:
-                if not self._connection_pool:
-                    sleep(0.01)
-                else:
-                    async with _LOCK:
+            async with _LOCK:
+                while True:
+                    if not self._connection_pool:
+                        await asyncio.sleep(0.01)
+                    else:
                         conn = self._connection_pool.pop(0)
                         self._connection_pool_in_use.append(conn)
                         break
@@ -107,7 +114,7 @@ class DbFetcher(DbInteractor):
 
                 cur = await conn.execute(stmt, (user.user_id,))
                 row = await cur.fetchone()
-                if not row:
+                if row:
                     return
 
                 stmt = """
