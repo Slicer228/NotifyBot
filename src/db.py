@@ -85,26 +85,9 @@ class DbInteractor:
         self._connection_pool_in_use.clear()
 
 
-
-def user_activity(func):
-    def wrapper(*args, **kwargs):
-        data = func(*args, **kwargs)
-        _LOCK.acquire()
-        kwargs['connection'].execute("""
-            UPDATE `users`
-            SET last_update = CURRENT_TIMESTAMP
-        """)
-        kwargs['connection'].commit()
-        _LOCK.release()
-        return data
-
-    return wrapper
-
-
 class DbFetcher:
 
     @staticmethod
-    @user_activity
     def set_user(
             user_id: int,
             logger: Logger,
@@ -122,7 +105,6 @@ class DbFetcher:
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при добавлении пользователя')
 
     @staticmethod
-    @user_activity
     def set_new_task(
                 task: Task,
                 logger: Logger,
@@ -172,30 +154,5 @@ class DbFetcher:
             logger.error(e)
             raise InternalValidationError('Ошибка в полученных данных')
 
-    @staticmethod
-    def is_updated_recently(
-            user_id: int,
-            last_update: datetime.datetime,
-            logger: Logger,
-            connection: sqlite3.Connection = None
-    ) -> bool:
-        stmt = """
-            SELECT last_update FROM users
-            WHERE user_id=?
-        """
-
-        try:
-            cur: sqlite3.Cursor = connection.execute(stmt, [user_id])
-            data = cur.fetchone()
-        except Exception as e:
-            logger.error(e)
-            raise DatabaseError('Ошибка при работе с базой данных!')
-
-        if data is None:
-            raise ExternalError('Пользователь не существует!')
-
-        if last_update < data[0]:
-            return True
-        return False
 
 
