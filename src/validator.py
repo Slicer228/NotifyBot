@@ -12,21 +12,11 @@ FRIDAY = 4
 SATURDAY = 5
 SUNDAY = 6
 
-WeekDays = Literal[
-    MONDAY: int,
-    TUESDAY: int,
-    WEDNESDAY: int,
-    THURSDAY: int,
-    FRIDAY: int,
-    SATURDAY: int,
-    SUNDAY: int
-]
-
 
 class Task(BaseModel):
     task_id: int
     user_id: int
-    week_day: WeekDays
+    week_day: int
     hours: int
     minutes: int
     description: Optional[str]

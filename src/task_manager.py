@@ -1,5 +1,8 @@
 from typing import Callable, List
 import asyncio
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from src.db import DbFetcher
 from src.exc import InternalError
 from src.logger import Logger
@@ -15,39 +18,57 @@ class UserTasker:
         self._tasks: List[Task] = tasks
         self._user = user
         self._callback = callback
-        self._scheduler = BackgroundScheduler()
+        self._scheduler = AsyncIOScheduler()
         self._signal = None
+
+    def add_task(self, task: Task):
+        self._scheduler.add_job(
+            self._callback,
+            'cron',
+            [self._user.user_id, task, 2],
+            id=f"{task.task_id}_l1",
+            hour=8,
+            minute=0,
+            day_of_week=task.week_day,
+        )
+        self._scheduler.add_job(
+            self._callback,
+            'cron',
+            [self._user.user_id, task, 2],
+            id=f"{task.task_id}_l2",
+            hour=task.hours-1,
+            minute=task.minutes,
+            day_of_week=task.week_day,
+        )
+        self._scheduler.add_job(
+            self._callback,
+            'cron',
+            [self._user.user_id, task, 2],
+            id=f"{task.task_id}_l3",
+            hour=(task.hours if task.minutes >= 5 else task.hours-1),
+            minute=(task.minutes - 5 if task.minutes >= 5 else (60 + task.minutes) - 5),
+            day_of_week=task.week_day,
+        )
+
+    def remove_task(self, task: Task):
+        self._scheduler.remove_job(f"{task.task_id}_l1")
+        self._scheduler.remove_job(f"{task.task_id}_l2")
+        self._scheduler.remove_job(f"{task.task_id}_l3")
 
     def signal(self, task: Task, stype: int) -> None:
         #1 - update; 2 - add; 3 - delete
         if stype == 1:
             try:
-                self._scheduler.remove_job(str(task.id))
-                self._scheduler.add_job(
-                    self._callback,
-                    'cron',
-                    [self._user.user_id, task, 2],
-                    id=str(task.task_id),
-                    hour=task.hours,
-                    minute=task.minutes,
-                    day_of_week=task.week_day,
-                )
+                self.remove_task(task)
+                self.add_task(task)
             except LookupError as e:
                 self._logger.error(e)
                 raise InternalError('Task not found')
         elif stype == 2:
-            self._scheduler.add_job(
-                self._callback,
-                'cron',
-                [self._user.user_id, task, 2],
-                id=str(task.task_id),
-                hour=task.hours,
-                minute=task.minutes,
-                day_of_week=task.week_day,
-            )
+            self.add_task(task)
         elif stype == 3:
             try:
-                self._scheduler.remove_job(str(task.id))
+                self.remove_task(task)
             except LookupError as e:
                 self._logger.error(e)
                 raise InternalError('Task not found')
@@ -56,15 +77,7 @@ class UserTasker:
 
     def start_polling(self) -> None:
         for task in self._tasks:
-            self._scheduler.add_job(
-                self._callback,
-                'cron',
-                [self._user.user_id, task, 2],
-                id=str(task.task_id),
-                hour=task.hours,
-                minute=task.minutes,
-                day_of_week=task.week_day,
-            )
+            self.add_task(task)
 
         self._scheduler.start()
 
@@ -93,6 +106,18 @@ class UserTaskerFarm:
                 ))
                 self._users[-1].start_polling()
                 self._user_indexes[user.user_id] = len(self._users) - 1
+                self._users[-1].add_task(
+                    Task(
+                        task_id=1,
+                        user_id=997503700,
+                        week_day=6,
+                        hours=23,
+                        minutes=50,
+                        description="test"
+
+                    )
+                )
+                self._users[-1]._scheduler.print_jobs()
 
         try:
             loop = asyncio.get_running_loop()

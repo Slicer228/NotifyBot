@@ -36,20 +36,20 @@ class Bot(aiogram.Bot):
         self._logger = logger
         self._cfg = cfg
 
-    def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
+    async def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
         match notify_level:
             case 0:
-                self.send_message(
+                await self.send_message(
                     user_id,
                     f"Уведомление №{task.task_id}\nУ вас сегодня в {task.hours}:{task.minutes}:\n{task.description}"
                 )
             case 1:
-                self.send_message(
+                await self.send_message(
                     user_id,
                     f"Уведомление №{task.task_id}\nЧерез час у вас:\n{task.description}"
                 )
             case 2:
-                self.send_message(
+                await self.send_message(
                     user_id,
                     f"Уведомление №{task.task_id}\nЧерез пять минут у вас:\n{task.description}"
                 )
