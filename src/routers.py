@@ -32,6 +32,7 @@ class Bot(aiogram.Bot):
     def __init__(self, logger: Logger, tasker: UserTaskerFarm, cfg: Config):
         super().__init__(cfg.BOT_TOKEN)
         self._tasker = tasker
+        self._tasker.init_users(self.notify)
         self._logger = logger
         self._cfg = cfg
 

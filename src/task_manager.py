@@ -26,7 +26,7 @@ class UserTasker:
                 self._scheduler.add_job(
                     self._callback,
                     'cron',
-                    [task.description],
+                    [self._user.user_id, task, 2],
                     id=str(task.task_id),
                     hour=task.hours,
                     minute=task.minutes,
@@ -39,7 +39,7 @@ class UserTasker:
             self._scheduler.add_job(
                 self._callback,
                 'cron',
-                [self._user.user_id, task.description],
+                [self._user.user_id, task, 2],
                 id=str(task.task_id),
                 hour=task.hours,
                 minute=task.minutes,
@@ -59,7 +59,7 @@ class UserTasker:
             self._scheduler.add_job(
                 self._callback,
                 'cron',
-                [self._user.user_id, task.description],
+                [self._user.user_id, task, 2],
                 id=str(task.task_id),
                 hour=task.hours,
                 minute=task.minutes,
@@ -79,9 +79,10 @@ class UserTaskerFarm:
         self._db = db
         self._callback = None
 
-    async def init_users(self, callback: Callable) -> None:
+    def init_users(self, callback: Callable) -> None:
         # crucial method when bot is initialazing
         self._callback = callback
+
         async def init(users: List[User]):
             for user in users:
                 self._users.append(UserTasker(
