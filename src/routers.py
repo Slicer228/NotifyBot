@@ -27,7 +27,7 @@ NotifyLevels = Literal[
 
 
 class Bot(aiogram.Bot):
-    __slots__ = ('_cfg', '_tasker', '_logger')
+    __slots__ = ('_cfg', '_tasker', '_logger', '_loop')
 
     def __init__(self, logger: Logger, tasker: UserTaskerFarm, cfg: Config):
         super().__init__(cfg.BOT_TOKEN)
@@ -36,23 +36,23 @@ class Bot(aiogram.Bot):
         self._logger = logger
         self._cfg = cfg
 
-    async def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
+    def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
         match notify_level:
             case 0:
-                await self.send_message(
+                asyncio.run_coroutine_threadsafe(self.send_message(
                     user_id,
                     f"Уведомление №{task.task_id}\nУ вас сегодня в {task.hours}:{task.minutes}:\n{task.description}"
-                )
+                ), self._loop)
             case 1:
-                await self.send_message(
+                asyncio.run_coroutine_threadsafe(self.send_message(
                     user_id,
-                    f"Уведомление №{task.task_id}\nЧерез час у вас:\n{task.description}"
-                )
+                    f"Уведомление №{task.task_id}\nЧерез 1 час у вас:\n{task.description}"
+                ), self._loop)
             case 2:
-                await self.send_message(
+                asyncio.run_coroutine_threadsafe(self.send_message(
                     user_id,
-                    f"Уведомление №{task.task_id}\nЧерез пять минут у вас:\n{task.description}"
-                )
+                    f"Уведомление №{task.task_id}\nЧерез 5 минут у вас:\n{task.description}"
+                ), self._loop)
             case _:
                 raise InternalError('Error in notify level')
 
@@ -74,6 +74,7 @@ class Bot(aiogram.Bot):
 
     def run(self):
         async def launch(dp: Dispatcher):
+            self._loop = asyncio.get_event_loop()
             await dp.start_polling(self)
         self.init_routers()
         asyncio.run(launch(_dp))

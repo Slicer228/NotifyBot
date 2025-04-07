@@ -18,7 +18,7 @@ class UserTasker:
         self._tasks: List[Task] = tasks
         self._user = user
         self._callback = callback
-        self._scheduler = AsyncIOScheduler()
+        self._scheduler = BackgroundScheduler()
         self._signal = None
 
     def add_task(self, task: Task):
@@ -106,18 +106,6 @@ class UserTaskerFarm:
                 ))
                 self._users[-1].start_polling()
                 self._user_indexes[user.user_id] = len(self._users) - 1
-                self._users[-1].add_task(
-                    Task(
-                        task_id=1,
-                        user_id=997503700,
-                        week_day=6,
-                        hours=23,
-                        minutes=50,
-                        description="test"
-
-                    )
-                )
-                self._users[-1]._scheduler.print_jobs()
 
         try:
             loop = asyncio.get_running_loop()
