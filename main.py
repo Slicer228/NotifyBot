@@ -1,6 +1,6 @@
 import sys
 
-from src.routers import Bot
+from src.routers.bot import Bot
 from src.task_manager import UserTaskerFarm
 
 if __name__ == "__main__":

@@ -28,4 +28,4 @@ class Task(BaseModel):
 
 class User(BaseModel):
     user_id: int
-    username: str
+    username: Optional[str]

@@ -83,7 +83,7 @@ class UserTasker:
 
 
 def user_exists(func):
-    async def wrapper(self: UserTaskerFarm, user: User, *args):
+    async def wrapper(self, user: User, *args):
         if not self._user_indexes.get(user.user_id, None):
             await self.add_user(user)
         await func(self, user, *args)

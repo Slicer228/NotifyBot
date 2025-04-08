@@ -2,6 +2,7 @@ import asyncio
 from typing import Literal
 from aiogram.filters import Command
 from aiogram.types import Message
+from aiogram.fsm.state import State, StatesGroup
 import aiogram
 from aiogram import Dispatcher, F
 from src.config import Config
@@ -9,6 +10,7 @@ from src.exc import InternalError
 from src.logger import Logger
 from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
+from src.routers.primary import get_primary_router
 
 
 _dp = Dispatcher()
@@ -25,14 +27,14 @@ NotifyLevels = Literal[
 
 
 class Bot(aiogram.Bot):
-    __slots__ = ('_cfg', '_tasker', '_logger', '_loop')
+    __slots__ = ('cfg', 'tasker', 'logger', '_loop')
 
     def __init__(self, logger: Logger, tasker: UserTaskerFarm, cfg: Config):
         super().__init__(cfg.BOT_TOKEN)
-        self._tasker = tasker
-        self._tasker.init_users(self.notify)
-        self._logger = logger
-        self._cfg = cfg
+        self.tasker = tasker
+        self.tasker.init_users(self.notify)
+        self.logger = logger
+        self.cfg = cfg
 
     def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
         match notify_level:
@@ -53,22 +55,14 @@ class Bot(aiogram.Bot):
                 ), self._loop)
             case _:
                 raise InternalError('Error in notify level')
+        if task.is_one_time:
+            asyncio.run_coroutine_threadsafe(
+                self.tasker.remove_task(User(user_id=user_id), task),
+                self._loop
+            )
 
     def init_routers(self):
-        @_dp.message(Command('start'))
-        async def on_message(message: Message):
-            try:
-                await self._tasker.add_user(User(
-                    user_id=message.from_user.id,
-                    username=message.from_user.username,
-                ))
-                await message.answer('Welcome to notify bot!')
-            except:
-                await message.answer('Error on start')
-
-        @_dp.message(Command('help'))
-        async def on_message(message: Message):
-            await message.answer('Help msg')
+        _dp.include_router(get_primary_router(self))
 
     def run(self):
         async def launch(dp: Dispatcher):
