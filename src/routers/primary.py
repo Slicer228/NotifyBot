@@ -4,11 +4,11 @@ from aiogram.types import Message
 from src.validator import User
 
 
-r = Router()
+_r = Router()
 
 
 def get_primary_router(root) -> Router:
-    @r.message(Command('start'))
+    @_r.message(Command('start'))
     async def on_message(message: Message):
         try:
             await root.tasker.add_user(User(
@@ -19,8 +19,8 @@ def get_primary_router(root) -> Router:
         except:
             await message.answer('Error on start')
 
-    @r.message(Command('help'))
+    @_r.message(Command('help'))
     async def on_message(message: Message):
         await message.answer('Help msg')
 
-    return r
+    return _r

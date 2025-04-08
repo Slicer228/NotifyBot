@@ -11,6 +11,7 @@ from src.logger import Logger
 from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
 from src.routers.primary import get_primary_router
+from src.routers.add_task import get_add_task_router
 
 
 _dp = Dispatcher()
@@ -62,7 +63,10 @@ class Bot(aiogram.Bot):
             )
 
     def init_routers(self):
-        _dp.include_router(get_primary_router(self))
+        _dp.include_routers(
+            get_primary_router(self),
+            get_add_task_router(self),
+        )
 
     def run(self):
         async def launch(dp: Dispatcher):
