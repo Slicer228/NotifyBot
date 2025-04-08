@@ -46,7 +46,9 @@ class DbInteractor:
                         `task_id` INTEGER AUTO_INCREMENT PRIMARY KEY,
                         `user_id` INTEGER NOT NULL,
                         `week_day` INTEGER NOT NULL,
-                        `time` TEXT NOT NULL,
+                        `hours` INTEGER NOT NULL,
+                        `minutes` INTEGER NOT NULL,
+                        `is_one_time` BOOLEAN DEFAULT FALSE, 
                         `description` TEXT,
                     FOREIGN KEY(`user_id`) REFERENCES `users`(`user_id`)
                     );
@@ -133,14 +135,34 @@ class DbFetcher(DbInteractor):
             ) -> None:
         try:
             stmt = """
-                INSERT INTO tasks(user_id, week_day, time, description) VALUES(?, ?, ?, ?)
+                INSERT INTO tasks(user_id, week_day, hours, minutes, is_one_time, description) VALUES(?, ?, ?, ?, ?, ?)
             """
             async with self.get_connection() as conn:
-                await conn.execute(stmt, *task)
+                await conn.execute(stmt, task())
+                stmt = "SELECT last_insert_rowid()"
+                cur = await conn.execute(stmt)
+                new_id = await cur.fetchone()
+                task.task_id = new_id[0]
                 await conn.commit()
         except Exception as e:
             self._logger.error(e)
             raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при добавлении задачи')
+
+    async def remove_task(
+            self,
+            task: Task
+    ) -> None:
+        try:
+            stmt = """
+                DELETE FROM tasks
+                WHERE task_id = ?
+            """
+            async with self.get_connection() as conn:
+                await conn.execute(stmt, task.task_id)
+                await conn.commit()
+        except Exception as e:
+            self._logger.error(e)
+            raise DatabaseError('Ошибка при работе с базой данных!\nОшибка при удалении задачи')
 
     async def get_all_tasks(
             self,
@@ -164,8 +186,10 @@ class DbFetcher(DbInteractor):
                     task_id=x[0],
                     user_id=x[1],
                     week_day=x[2],
-                    time=x[3],
-                    description=x[4],
+                    hours=x[3],
+                    minutes=x[4],
+                    is_one_time=x[5],
+                    description=x[6],
                 ),
                 data
             ))

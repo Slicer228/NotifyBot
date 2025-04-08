@@ -14,18 +14,16 @@ SUNDAY = 6
 
 
 class Task(BaseModel):
-    task_id: int
+    task_id: Optional[int]
     user_id: int
     week_day: int
     hours: int
     minutes: int
+    is_one_time: bool = False
     description: Optional[str]
 
-    def __iter__(self):
-        yield self.user_id
-        yield self.week_day
-        yield self.time
-        yield self.description
+    def __call__(self) -> tuple:
+        return self.user_id, self.week_day, self.hours, self.minutes, self.description
 
 
 class User(BaseModel):

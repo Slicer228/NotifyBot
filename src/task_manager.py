@@ -82,6 +82,15 @@ class UserTasker:
         self._scheduler.start()
 
 
+def user_exists(func):
+    async def wrapper(self: UserTaskerFarm, user: User, *args):
+        if not self._user_indexes.get(user.user_id, None):
+            await self.add_user(user)
+        await func(self, user, *args)
+
+    return wrapper
+
+
 class UserTaskerFarm:
     __slots__ = ('_users', '_user_indexes', '_logger', '_db', '_callback')
 
@@ -127,23 +136,20 @@ class UserTaskerFarm:
         ))
         self._users[-1].start_polling()
 
+    @user_exists
     async def add_task(self, user: User, task: Task) -> None:
-        if not self._user_indexes.get(user.user_id, None):
-            await self.add_user(user)
         await self._db.set_new_task(task)
         self._users[self._user_indexes[user.user_id]].signal(task, 2)
 
+    @user_exists
     async def remove_task(self, user: User, task: Task) -> None:
-        if not self._user_indexes.get(user.user_id, None):
-            await self.add_user(user)
-        await self._db.set_new_task(task)
+        await self._db.remove_task(task)
         self._users[self._user_indexes[user.user_id]].signal(task, 3)
 
+    @user_exists
     async def update_task(self, user: User, task: Task) -> None:
-        if not self._user_indexes.get(user.user_id, None):
-            await self.add_user(user)
-        await self._db.set_new_task(task)
-        self._users[self._user_indexes[user.user_id]].signal(task, 1)
+        await self.remove_task(user, task)
+        await self.add_task(user, task)
 
 
 
