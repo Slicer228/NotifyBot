@@ -1,10 +1,7 @@
 import asyncio
 from typing import Literal
-from aiogram.filters import Command
-from aiogram.types import Message
-from aiogram.fsm.state import State, StatesGroup
 import aiogram
-from aiogram import Dispatcher, F
+from aiogram import Dispatcher
 from src.config import Config
 from src.exc import InternalError
 from src.logger import Logger
@@ -29,13 +26,21 @@ NotifyLevels = Literal[
 
 class Bot(aiogram.Bot):
     __slots__ = ('cfg', 'tasker', 'logger', '_loop')
+    _instance = None
 
-    def __init__(self, logger: Logger, tasker: UserTaskerFarm, cfg: Config):
+    def __init__(self, logger: Logger = None, tasker: UserTaskerFarm = None, cfg: Config = None):
         super().__init__(cfg.BOT_TOKEN)
+        if not logger or not tasker or not cfg:
+            raise InternalError
         self.tasker = tasker
         self.tasker.init_users(self.notify)
         self.logger = logger
         self.cfg = cfg
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
         match notify_level:
