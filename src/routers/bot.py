@@ -33,7 +33,7 @@ class Bot(aiogram.Bot):
         if not logger or not tasker or not cfg:
             raise InternalError
         self.tasker = tasker
-        self.tasker.init_users(self.notify)
+        self.tasker.init_users(self.notify, self.del_msg)
         self.logger = logger
         self.cfg = cfg
 
@@ -43,29 +43,41 @@ class Bot(aiogram.Bot):
         return cls._instance
 
     def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
-        match notify_level:
-            case 0:
-                asyncio.run_coroutine_threadsafe(self.send_message(
-                    user_id,
-                    f"Уведомление №{task.task_id}\nУ вас сегодня в {task.hours}:{task.minutes}:\n{task.description}"
-                ), self._loop)
-            case 1:
-                asyncio.run_coroutine_threadsafe(self.send_message(
-                    user_id,
-                    f"Уведомление №{task.task_id}\nЧерез 1 час у вас:\n{task.description}"
-                ), self._loop)
-            case 2:
-                asyncio.run_coroutine_threadsafe(self.send_message(
-                    user_id,
-                    f"Уведомление №{task.task_id}\nЧерез 5 минут у вас:\n{task.description}"
-                ), self._loop)
-            case _:
-                raise InternalError('Error in notify level')
-        if task.is_one_time:
+        try:
+            match notify_level:
+                case 0:
+                    asyncio.run_coroutine_threadsafe(self.send_message(
+                        user_id,
+                        f"Уведомление №{task.task_id}\nУ вас сегодня в {task.hours}:{task.minutes}:\n{task.description}"
+                    ), self._loop)
+                case 1:
+                    asyncio.run_coroutine_threadsafe(self.send_message(
+                        user_id,
+                        f"Уведомление №{task.task_id}\nЧерез 1 час у вас:\n{task.description}"
+                    ), self._loop)
+                case 2:
+                    asyncio.run_coroutine_threadsafe(self.send_message(
+                        user_id,
+                        f"Уведомление №{task.task_id}\nЧерез 5 минут у вас:\n{task.description}"
+                    ), self._loop)
+                case _:
+                    raise InternalError('Error in notify level')
+            if task.is_one_time:
+                asyncio.run_coroutine_threadsafe(
+                    self.tasker.remove_task(User(user_id=user_id), task),
+                    self._loop
+                )
+        except Exception as e:
+            self.logger.critical(e)
+
+    def del_msg(self, chat_id: int, msg_id: int):
+        try:
             asyncio.run_coroutine_threadsafe(
-                self.tasker.remove_task(User(user_id=user_id), task),
+                self.delete_message(chat_id, msg_id),
                 self._loop
             )
+        except Exception as e:
+            self.logger.error(e)
 
     def init_routers(self):
         _dp.include_routers(
@@ -76,7 +88,7 @@ class Bot(aiogram.Bot):
     def run(self):
         async def launch(dp: Dispatcher):
             self._loop = asyncio.get_event_loop()
-            await dp.start_polling(self)
+            await dp.start_polling(self, close_bot_session=True, skip_updates=True)
         self.init_routers()
         asyncio.run(launch(_dp))
 

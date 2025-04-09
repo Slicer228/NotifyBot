@@ -92,46 +92,57 @@ def user_exists(func):
 
 
 class UserTaskerFarm:
-    __slots__ = ('_users', '_user_indexes', '_logger', '_db', '_callback')
+    __slots__ = ('_users', '_user_indexes', '_logger', '_db', '_callback_notify', '_scheduler', '_callback_delete')
 
     def __init__(self, logger: Logger, db: DbFetcher):
         self._user_indexes = dict()
         self._users: List[UserTasker] = []
         self._logger = logger
         self._db = db
-        self._callback = None
+        self._callback_notify = None
+        self._callback_delete = None
+        self._scheduler = BackgroundScheduler()
 
-    def init_users(self, callback: Callable) -> None:
+    def init_users(self, callback_out: Callable, callback_in: Callable) -> None:
         # crucial method when bot is initialazing
-        self._callback = callback
+        self._callback_notify = callback_out
+        self._callback_delete = callback_in
+        self._scheduler.add_job(
+            self._del_yesterday_msgs,
+            'cron',
+            hour=0,
+            minute=0,
+        )
+        self._scheduler.start()
 
         async def init(users: List[User]):
             for user in users:
                 self._users.append(UserTasker(
                     self._logger,
                     user,
-                    self._callback,
+                    self._callback_notify,
                     await self._db.get_all_tasks(user.user_id)
                 ))
                 self._users[-1].start_polling()
                 self._user_indexes[user.user_id] = len(self._users) - 1
 
         try:
-            loop = asyncio.get_running_loop()
-            loop.run_until_complete(init(self._db.get_all_users()))
-        except RuntimeError:
-            try:
-                asyncio.run(init(self._db.get_all_users()))
-            except BaseException as e:
-                self._logger.error(e)
-                raise InternalError('Error while initializing users')
+            asyncio.run(init(self._db.get_all_users()))
+        except BaseException as e:
+            self._logger.error(e)
+            raise InternalError('Error while initializing users')
+
+    def _del_yesterday_msgs(self,) -> None:
+        msgs = self._db.clear_and_get_msg_to_kill()
+        for msg in msgs:
+            self._callback_delete(*msg)
 
     async def add_user(self, user: User) -> None:
         await self._db.set_user(user)
         self._users.append(UserTasker(
             self._logger,
             user,
-            self._callback,
+            self._callback_notify,
             await self._db.get_all_tasks(user.user_id)
         ))
         self._users[-1].start_polling()

@@ -54,6 +54,14 @@ class DbInteractor:
                     );
                 """
             )
+            conn.execute(
+                """
+                    CREATE TABLE IF NOT EXISTS `msg_to_kill` (
+                        `chat_id` INTEGER NOT NULL,
+                        `msg_id` INTEGER NOT NULL
+                    );
+                """
+            )
             conn.commit()
             conn.close()
         except BaseException as e:
@@ -207,6 +215,36 @@ class DbFetcher(DbInteractor):
             data = cur.fetchall()
 
             return [User(user_id=u[0], username=u[1]) for u in data]
+
+    async def add_msg_to_kill(self, chat_id: int, msg_id: int) -> None:
+        async with self.get_connection() as conn:
+            stmt = """
+                INSERT INTO msg_to_kill (chat_id, msg_id)
+                VALUES (?, ?)
+            """
+            try:
+                await conn.execute(stmt, [chat_id, msg_id])
+                await conn.commit()
+            except BaseException as e:
+                self._logger.error(e)
+
+    def clear_and_get_msg_to_kill(self) -> list:
+        with sqlite3.connect(self._cfg.DB_NAME) as conn:
+            stmt = """
+                SELECT * FROM msg_to_kill
+            """
+            try:
+                cur = conn.execute(stmt)
+                data = cur.fetchall()
+                stmt = """
+                    DELETE FROM msg_to_kill
+                """
+                conn.execute(stmt)
+                conn.commit()
+                return data
+            except BaseException as e:
+                self._logger.error(e)
+
 
 
 
