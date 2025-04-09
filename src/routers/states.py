@@ -3,7 +3,8 @@ from typing import Optional
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
+
 from src.validator import Task
 
 
@@ -13,7 +14,7 @@ def del_last_msg(bot):
             data = await state.get_data()
             last_msg_id: int = data.get("last_msg_id", None)
             if last_msg_id:
-                await bot.delete_message(msg.chat.id, last_msg_id)
+                await bot.delete_message(msg.from_user.id, last_msg_id)
             msg_id = await func(msg, state, *args, **kwargs)
             await state.update_data(last_msg_id=msg_id)
         return wrapper
@@ -28,6 +29,10 @@ def check_state(func):
     return wrapper
 
 
+class DeclineChanges(CallbackData, prefix="decline"):
+    ...
+
+
 class AddTask(StatesGroup):
     week_day = State()
     hour = State()
@@ -37,11 +42,11 @@ class AddTask(StatesGroup):
 
 
 class GeneratedTask(CallbackData, prefix="task"):
-    week_day: Optional[int]
-    hour: Optional[int]
-    minute: Optional[int]
-    is_one_time: Optional[bool]
-    description: Optional[str]
+    week_day: Optional[int] = None
+    hour: Optional[int] = None
+    minute: Optional[int] = None
+    is_one_time: Optional[bool] = None
+    description: Optional[str] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
