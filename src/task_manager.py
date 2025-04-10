@@ -86,7 +86,7 @@ def user_exists(func):
     async def wrapper(self, user: User, *args):
         if not self._user_indexes.get(user.user_id, None):
             await self.add_user(user)
-        await func(self, user, *args)
+        return await func(self, user, *args)
 
     return wrapper
 
@@ -161,6 +161,10 @@ class UserTaskerFarm:
     async def update_task(self, user: User, task: Task) -> None:
         await self.remove_task(user, task)
         await self.add_task(user, task)
+
+    @user_exists
+    async def get_task(self, user: User) -> List[Task]:
+        return await self._db.get_all_tasks(user.user_id)
 
 
 

@@ -5,6 +5,7 @@ from aiogram import Dispatcher
 from src.config import Config
 from src.exc import InternalError
 from src.logger import Logger
+from src.routers.get_task import get_task_router
 from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
 from src.routers.primary import get_primary_router
@@ -14,16 +15,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 _dp = Dispatcher()
-
-MORNING = 0
-HOUR_BEFORE = 1
-FIVE_MINS_BEFORE = 2
-
-NotifyLevels = Literal[
-    MORNING: int,
-    HOUR_BEFORE: int,
-    FIVE_MINS_BEFORE: int
-]
 
 
 class Bot(aiogram.Bot):
@@ -44,7 +35,7 @@ class Bot(aiogram.Bot):
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def notify(self, user_id: int, task: Task, notify_level: NotifyLevels):
+    def notify(self, user_id: int, task: Task, notify_level: int):
         try:
             match notify_level:
                 case 0:
@@ -85,6 +76,7 @@ class Bot(aiogram.Bot):
         _dp.include_routers(
             get_primary_router(self),
             get_add_task_router(self),
+            get_task_router(self),
         )
 
     def run(self):

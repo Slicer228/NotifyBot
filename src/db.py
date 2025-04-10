@@ -203,6 +203,7 @@ class DbFetcher(DbInteractor):
             ))
             return data
         except ValidationError as e:
+            print(3)
             self._logger.error(e)
             raise InternalValidationError('Ошибка в полученных данных')
 

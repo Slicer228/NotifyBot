@@ -1,9 +1,7 @@
-import sys
-
-from src.routers.bot import Bot
-from src.task_manager import UserTaskerFarm
-
 if __name__ == "__main__":
+    import sys
+    from src.routers.bot import Bot
+    from src.task_manager import UserTaskerFarm
     from src.config import Config
     from src.logger import Logger
     from src.db import DbFetcher

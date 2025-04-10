@@ -56,11 +56,12 @@ class GeneratedTask(CallbackData, prefix="task"):
             if len(data) > 255:
                 raise AttributeError("Description must be less than 255 characters")
 
-    def __call__(self):
+    def __call__(self, user_id):
         return Task(
+            user_id=user_id,
             week_day=self.week_day,
-            hour=self.hour,
-            minute=self.minute,
+            hours=self.hour,
+            minutes=self.minute,
             is_one_time=self.is_one_time,
             description=self.description
         )
