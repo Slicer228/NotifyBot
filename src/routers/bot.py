@@ -9,8 +9,10 @@ from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
 from src.routers.primary import get_primary_router
 from src.routers.add_task import get_add_task_router
+import logging
 
 
+logging.basicConfig(level=logging.INFO)
 _dp = Dispatcher()
 
 MORNING = 0

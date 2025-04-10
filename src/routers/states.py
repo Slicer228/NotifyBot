@@ -1,10 +1,8 @@
 from typing import Optional
-
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
-
+from aiogram.types import Message
 from src.validator import Task
 
 
@@ -30,6 +28,10 @@ def check_state(func):
 
 
 class DeclineChanges(CallbackData, prefix="decline"):
+    ...
+
+
+class EndChanges(CallbackData, prefix="end"):
     ...
 
 
