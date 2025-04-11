@@ -85,7 +85,7 @@ def get_hours_kb(proceed_task: GeneratedTask):
                     ).pack()
                 ),
             ]
-            for i in range(0, 25, 2)
+            for i in range(0, 24, 2)
         ]
     )
 
@@ -119,7 +119,7 @@ def get_minutes_kb(proceed_task: GeneratedTask):
                     ).pack()
                 ),
             ]
-            for i in range(0, 61, 3)
+            for i in range(0, 59, 3)
         ]
     )
 

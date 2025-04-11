@@ -10,10 +10,8 @@ from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
 from src.routers.primary import get_primary_router
 from src.routers.add_task import get_add_task_router
-import logging
 
 
-logging.basicConfig(level=logging.INFO)
 _dp = Dispatcher()
 
 
@@ -82,6 +80,7 @@ class Bot(aiogram.Bot):
     def run(self):
         async def launch(dp: Dispatcher):
             self._loop = asyncio.get_event_loop()
+            self.logger.info('Starting bot...')
             await dp.start_polling(self, close_bot_session=True, skip_updates=True)
         self.init_routers()
         asyncio.run(launch(_dp))

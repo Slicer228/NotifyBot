@@ -43,7 +43,7 @@ class DbInteractor:
             conn.execute(
                 """
                     CREATE TABLE IF NOT EXISTS `tasks` (
-                        `task_id` INTEGER AUTO_INCREMENT PRIMARY KEY,
+                        `task_id` INTEGER PRIMARY KEY AUTOINCREMENT,
                         `user_id` INTEGER NOT NULL,
                         `week_day` INTEGER NOT NULL,
                         `hours` INTEGER NOT NULL,
@@ -203,7 +203,6 @@ class DbFetcher(DbInteractor):
             ))
             return data
         except ValidationError as e:
-            print(3)
             self._logger.error(e)
             raise InternalValidationError('Ошибка в полученных данных')
 

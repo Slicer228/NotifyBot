@@ -38,7 +38,7 @@ def get_task_router(root: Bot) -> Router:
         ))
         resp = ""
         for task in tasks:
-            resp += f"Задача №{task.task_id}\nКогда: {format_to_week_day(task.week_day_num)} {task.hours}:{task.minutes}\n{task.description}\n\n"
+            resp += f"Задача №{task.task_id}\nКогда: {format_to_week_day(task.week_day)} {task.hours}:{task.minutes}\n{task.description}\n\n"
         if resp:
             msg = await message.answer(resp, reply_markup=main_menu_kb)
         else:

@@ -23,7 +23,7 @@ class Task(BaseModel):
     description: Optional[str] = None
 
     def __call__(self) -> tuple:
-        return self.user_id, self.week_day, self.hours, self.minutes, self.description
+        return self.user_id, self.week_day, self.hours, self.minutes, self.is_one_time, self.description
 
 
 class User(BaseModel):

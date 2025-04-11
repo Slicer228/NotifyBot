@@ -73,10 +73,10 @@ def get_add_task_router(root: Bot) -> Router:
             task = (await state.get_data()).get('task', None)
             if not task:
                 msg = await message.answer("Что то пошло не так!")
+                await state.clear()
             else:
                 task.description = message.text
                 try:
-                    print(type(task.hour),type(task.minute))
                     await root.tasker.add_task(
                         User(
                             user_id=message.from_user.id,
@@ -84,9 +84,11 @@ def get_add_task_router(root: Bot) -> Router:
                         ),
                         task(message.from_user.id)
                     )
-                    msg = await message.answer('Ваша задача успешно добавлена!', reply_markup=main_menu_kb)
+                    msg = await message.answer('Ваша задача успешно добавлена!\nПереход в главное меню', reply_markup=main_menu_kb)
+                    await state.clear()
                 except Exception as e:
                     msg = await message.answer('При добавлении задачи произошла ошибка!')
+                    await state.clear()
         return msg.message_id
 
     return _r
