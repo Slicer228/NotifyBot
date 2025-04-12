@@ -2,7 +2,7 @@ from aiogram import Router, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from src.routers.states import del_last_msg, check_state, DeclineChanges, EndChanges
+from src.routers.states import del_last_msg, check_state, DeclineChanges
 from src.validator import User
 from src.routers.buttons import main_menu_kb
 
@@ -40,11 +40,4 @@ def get_primary_router(root: Bot) -> Router:
 
         return msg.message_id
 
-    @_r.callback_query(EndChanges.filter())
-    @del_last_msg(root)
-    async def end(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
-        await state.clear()
-        msg = await root.send_message(cb.from_user.id, "Главное меню", reply_markup=main_menu_kb)
-
-        return msg.message_id
     return _r

@@ -31,8 +31,13 @@ class DeclineChanges(CallbackData, prefix="decline"):
     ...
 
 
-class EndChanges(CallbackData, prefix="end"):
-    ...
+class DeleteTask(StatesGroup):
+    process = State()
+
+
+class ToDeleteTask(CallbackData, prefix="end"):
+    task_id: int
+    decided: Optional[bool] = None
 
 
 class AddTask(StatesGroup):

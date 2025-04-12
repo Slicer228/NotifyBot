@@ -6,6 +6,7 @@ from src.config import Config
 from src.db import DbFetcher
 from src.exc import InternalError
 from src.logger import Logger
+from src.routers.del_task import get_del_task_router
 from src.routers.get_task import get_task_router
 from src.task_manager import UserTaskerFarm
 from src.validator import Task, User
@@ -82,6 +83,7 @@ class Bot(aiogram.Bot):
             get_primary_router(self),
             get_add_task_router(self),
             get_task_router(self),
+            get_del_task_router(self),
         )
 
     def run(self):

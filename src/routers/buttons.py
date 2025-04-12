@@ -1,6 +1,8 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
-from src.routers.states import GeneratedTask, DeclineChanges
+from typing import List
 
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
+from src.routers.states import GeneratedTask, DeclineChanges, ToDeleteTask
+from src.validator import Task
 
 main_menu_kb = ReplyKeyboardMarkup(
     keyboard=[
@@ -149,4 +151,90 @@ def get_is_one_time_kb(proceed_task: GeneratedTask):
             ]
         ]
     )
+
+
+def get_decide_cb(task_to_delete: ToDeleteTask):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Да",
+                    callback_data=ToDeleteTask(
+                        task_id=task_to_delete.task_id,
+                        decided=True
+                    ).pack()
+                ),
+                InlineKeyboardButton(
+                    text="Нет",
+                    callback_data=ToDeleteTask(
+                        task_id=task_to_delete.task_id,
+                        decided=False
+                    ).pack()
+                )
+            ]
+        ]
+    )
+
+
+def get_tasks_to_delete_kb(tasks: List[Task]):
+    if len(tasks) == 1:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=str(tasks[i].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i].task_id
+                        ).pack()
+                    )
+                ]
+                for i in range(0, len(tasks)-1, 3)
+            ]
+        )
+    elif len(tasks) == 2:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=str(tasks[i].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i].task_id
+                        ).pack()
+                    ),
+                    InlineKeyboardButton(
+                        text=str(tasks[i + 1].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i + 1].task_id
+                        ).pack()
+                    )
+                ]
+                for i in range(0, len(tasks) - 1, 3)
+            ]
+        )
+    else:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=str(tasks[i].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i].task_id
+                        ).pack()
+                    ),
+                    InlineKeyboardButton(
+                        text=str(tasks[i + 1].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i + 1].task_id
+                        ).pack()
+                    ),
+                    InlineKeyboardButton(
+                        text=str(tasks[i + 2].task_id),
+                        callback_data=ToDeleteTask(
+                            task_id=tasks[i + 2].task_id
+                        ).pack()
+                    ),
+                ]
+                for i in range(0, len(tasks) - 1, 3)
+            ]
+        )
 

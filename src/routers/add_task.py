@@ -7,6 +7,7 @@ from src.routers.states import AddTask, GeneratedTask, DeclineChanges
 from src.routers.states import del_last_msg, check_state, DeclineChanges
 from src.routers.buttons import week_days_inline, get_minutes_kb, get_hours_kb, get_is_one_time_kb, main_menu_kb
 
+
 _r = Router()
 
 

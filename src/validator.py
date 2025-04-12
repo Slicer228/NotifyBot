@@ -15,11 +15,11 @@ SUNDAY = 6
 
 class Task(BaseModel):
     task_id: Optional[int] = None
-    user_id: int
-    week_day: int
-    hours: int
-    minutes: int
-    is_one_time: bool = False
+    user_id: Optional[int] = None
+    week_day: Optional[int] = None
+    hours: Optional[int] = None
+    minutes: Optional[int] = None
+    is_one_time: Optional[bool] = False
     description: Optional[str] = None
 
     def __call__(self) -> tuple:
