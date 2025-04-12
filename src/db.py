@@ -166,7 +166,7 @@ class DbFetcher(DbInteractor):
                 WHERE task_id = ?
             """
             async with self.get_connection() as conn:
-                await conn.execute(stmt, task.task_id)
+                await conn.execute(stmt, [task.task_id])
                 await conn.commit()
         except Exception as e:
             self._logger.error(e)

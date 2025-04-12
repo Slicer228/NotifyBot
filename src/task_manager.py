@@ -1,13 +1,13 @@
 from typing import Callable, List
 import asyncio
-
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
 from src.db import DbFetcher
 from src.exc import InternalError
 from src.logger import Logger
 from src.validator import User, Task
 from apscheduler.schedulers.background import BackgroundScheduler
+tz = ZoneInfo('Europe/Moscow')
 
 
 class UserTasker:
@@ -18,7 +18,7 @@ class UserTasker:
         self._tasks: List[Task] = tasks
         self._user = user
         self._callback = callback
-        self._scheduler = BackgroundScheduler()
+        self._scheduler = BackgroundScheduler(timezone=tz)
         self._signal = None
 
     def add_task(self, task: Task):
@@ -101,7 +101,7 @@ class UserTaskerFarm:
         self._db = db
         self._callback_notify = None
         self._callback_delete = None
-        self._scheduler = BackgroundScheduler()
+        self._scheduler = BackgroundScheduler(timezone=tz)
 
     def init_users(self, callback_out: Callable, callback_in: Callable) -> None:
         # crucial method when bot is initialazing
@@ -132,7 +132,7 @@ class UserTaskerFarm:
             self._logger.error(e)
             raise InternalError('Error while initializing users')
 
-    def _del_yesterday_msgs(self,) -> None:
+    def _del_yesterday_msgs(self) -> None:
         msgs = self._db.clear_and_get_msg_to_kill()
         for msg in msgs:
             self._callback_delete(*msg)

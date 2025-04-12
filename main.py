@@ -11,7 +11,7 @@ if __name__ == "__main__":
     try:
         db = DbFetcher(logger, cfg)
         tasker = UserTaskerFarm(logger, db)
-        bot = Bot(logger, tasker, cfg)
+        bot = Bot(db, logger, tasker, cfg)
         bot.run()
     finally:
         try:
