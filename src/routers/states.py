@@ -16,13 +16,25 @@ def del_last_msg(bot: Bot):
             msg: MessageObj = await func(main_obj, state, *args, **kwargs)
             if last_msg_id:
                 try:
-                    msg_ = await bot.edit_message_text(
-                        text=msg.text,
-                        chat_id=msg.chat_id,
-                        reply_markup=msg.kb,
-                        message_id=last_msg_id
-                    )
-                    await state.update_data(last_msg_id=msg_.message_id)
+                    if msg.need_update:
+                        await bot.delete_message(
+                            chat_id=msg.chat_id,
+                            message_id=last_msg_id
+                        )
+                        msg_ = await bot.send_message(
+                            text=msg.text,
+                            chat_id=msg.chat_id,
+                            reply_markup=msg.kb
+                        )
+                        await state.update_data(last_msg_id=msg_.message_id)
+                    else:
+                        msg_ = await bot.edit_message_text(
+                            text=msg.text,
+                            chat_id=msg.chat_id,
+                            reply_markup=msg.kb,
+                            message_id=last_msg_id
+                        )
+                        await state.update_data(last_msg_id=msg_.message_id)
                 except Exception as e:
                     if 'are exactly the same' not in str(e):
                         msg_ = await bot.send_message(

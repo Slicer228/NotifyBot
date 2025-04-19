@@ -72,6 +72,7 @@ def get_add_task_router(root: Bot) -> Router:
                 text="Слишком длинное описание!",
                 kb=main_menu_kb,
                 chat_id=message.from_user.id,
+                need_update=True
             )
         else:
             task = (await state.get_data()).get('task', None)
@@ -81,6 +82,7 @@ def get_add_task_router(root: Bot) -> Router:
                     text="Что то пошло не так!",
                     kb=main_menu_kb,
                     chat_id=message.from_user.id,
+                    need_update=True
                 )
             else:
                 task.description = message.text
@@ -97,6 +99,7 @@ def get_add_task_router(root: Bot) -> Router:
                         text='Ваша задача успешно добавлена!\nПереход в главное меню',
                         kb=main_menu_kb,
                         chat_id=message.from_user.id,
+                        need_update=True
                     )
                 except Exception as e:
                     await state.clear()
@@ -104,6 +107,7 @@ def get_add_task_router(root: Bot) -> Router:
                         text='При добавлении задачи произошла ошибка!',
                         kb=main_menu_kb,
                         chat_id=message.from_user.id,
+                        need_update=True
                     )
 
     return _r

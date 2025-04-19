@@ -36,3 +36,4 @@ class MessageObj(BaseModel):
     chat_id: Optional[int] = None
     text: Optional[str] = None
     kb: Optional[InlineKeyboardMarkup] = None
+    need_update: Optional[bool] = False
