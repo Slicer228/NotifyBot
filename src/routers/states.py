@@ -1,20 +1,47 @@
 from typing import Optional
+
+from aiogram import Bot
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
-from src.validator import Task
+from src.validator import Task, MessageObj
 
 
-def del_last_msg(bot):
+def del_last_msg(bot: Bot):
     def inner_decorator(func):
-        async def wrapper(msg: Message, state: FSMContext, *args, **kwargs):
+        async def wrapper(main_obj, state: FSMContext, *args, **kwargs):
             data = await state.get_data()
-            last_msg_id: int = data.get("last_msg_id", None)
+            last_msg_id = data.get("last_msg_id", None)
+            msg: MessageObj = await func(main_obj, state, *args, **kwargs)
             if last_msg_id:
-                await bot.delete_message(msg.from_user.id, last_msg_id)
-            msg_id = await func(msg, state, *args, **kwargs)
-            await state.update_data(last_msg_id=msg_id)
+                try:
+                    msg_ = await bot.edit_message_text(
+                        text=msg.text,
+                        chat_id=msg.chat_id,
+                        reply_markup=msg.kb,
+                        message_id=last_msg_id
+                    )
+                    await state.update_data(last_msg_id=msg_.message_id)
+                except Exception as e:
+                    if 'are exactly the same' not in str(e):
+                        msg_ = await bot.send_message(
+                            text=msg.text,
+                            chat_id=msg.chat_id,
+                            reply_markup=msg.kb
+                        )
+                        await state.update_data(last_msg_id=msg_.message_id)
+            else:
+                try:
+                    msg_ = await bot.send_message(
+                        text=msg.text,
+                        chat_id=msg.chat_id,
+                        reply_markup=msg.kb
+                    )
+                    await state.update_data(last_msg_id=msg_.message_id)
+                except Exception as e:
+                    bot.logger.error(e)
+
         return wrapper
     return inner_decorator
 
@@ -25,6 +52,18 @@ def check_state(func):
             await func(*args, state, **kwargs)
 
     return wrapper
+
+
+class StartDeleteTask(CallbackData, prefix="start_delete"):
+    ...
+
+
+class StartAddTask(CallbackData, prefix="start_add"):
+    ...
+
+
+class ShowTasks(CallbackData, prefix="show_tasks"):
+    ...
 
 
 class DeclineChanges(CallbackData, prefix="decline"):

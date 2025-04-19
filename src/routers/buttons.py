@@ -1,20 +1,19 @@
 from typing import List
-
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
-from src.routers.states import GeneratedTask, DeclineChanges, ToDeleteTask
+from src.routers.states import GeneratedTask, DeclineChanges, ToDeleteTask, StartDeleteTask, StartAddTask, ShowTasks
 from src.validator import Task
 
-main_menu_kb = ReplyKeyboardMarkup(
-    keyboard=[
+
+main_menu_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
         [
-            KeyboardButton(text="Добавить задачу"),
-            KeyboardButton(text="Удалить задачу")
+            InlineKeyboardButton(text="Добавить задачу", callback_data=StartAddTask().pack()),
+            InlineKeyboardButton(text="Удалить задачу", callback_data=StartDeleteTask().pack())
         ],
         [
-            KeyboardButton(text="Показать мои задачи")
+            InlineKeyboardButton(text="Показать мои задачи", callback_data=ShowTasks().pack())
         ]
-    ],
-    resize_keyboard=True
+    ]
 )
 
 
@@ -69,8 +68,7 @@ week_days_inline = InlineKeyboardMarkup(inline_keyboard=[
 
 
 def get_hours_kb(proceed_task: GeneratedTask):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+    kb = [
             [
                 InlineKeyboardButton(
                     text=str(i),
@@ -89,12 +87,17 @@ def get_hours_kb(proceed_task: GeneratedTask):
             ]
             for i in range(0, 24, 2)
         ]
+    kb.append([InlineKeyboardButton(
+        text="ОТМЕНА",
+        callback_data=DeclineChanges().pack()
+    )])
+    return InlineKeyboardMarkup(
+        inline_keyboard=kb
     )
 
 
 def get_minutes_kb(proceed_task: GeneratedTask):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+    kb = [
             [
                 InlineKeyboardButton(
                     text=str(i),
@@ -123,12 +126,17 @@ def get_minutes_kb(proceed_task: GeneratedTask):
             ]
             for i in range(0, 59, 3)
         ]
+    kb.append([InlineKeyboardButton(
+        text="ОТМЕНА",
+        callback_data=DeclineChanges().pack()
+    )])
+    return InlineKeyboardMarkup(
+        inline_keyboard=kb
     )
 
 
 def get_is_one_time_kb(proceed_task: GeneratedTask):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+    kb = [
             [
                 InlineKeyboardButton(
                     text="Да",
@@ -150,12 +158,17 @@ def get_is_one_time_kb(proceed_task: GeneratedTask):
                 )
             ]
         ]
+    kb.append([InlineKeyboardButton(
+        text="ОТМЕНА",
+        callback_data=DeclineChanges().pack()
+    )])
+    return InlineKeyboardMarkup(
+        inline_keyboard=kb
     )
 
 
 def get_decide_cb(task_to_delete: ToDeleteTask):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+    kb = [
             [
                 InlineKeyboardButton(
                     text="Да",
@@ -173,47 +186,57 @@ def get_decide_cb(task_to_delete: ToDeleteTask):
                 )
             ]
         ]
+    return InlineKeyboardMarkup(
+        inline_keyboard=kb
     )
 
 
 def get_tasks_to_delete_kb(tasks: List[Task]):
     if len(tasks) == 1:
-        return InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text=str(tasks[i].task_id),
-                        callback_data=ToDeleteTask(
-                            task_id=tasks[i].task_id
-                        ).pack()
-                    )
-                ]
-                for i in range(0, len(tasks)-1, 3)
+        kb = [
+            [
+                InlineKeyboardButton(
+                    text=str(tasks[0].task_id),
+                    callback_data=ToDeleteTask(
+                        task_id=tasks[0].task_id
+                    ).pack()
+                )
             ]
+        ]
+        kb.append([InlineKeyboardButton(
+            text="В главное меню",
+            callback_data=DeclineChanges().pack()
+        )])
+        return InlineKeyboardMarkup(
+            inline_keyboard=kb
         )
     elif len(tasks) == 2:
-        return InlineKeyboardMarkup(
-            inline_keyboard=[
-                [
-                    InlineKeyboardButton(
-                        text=str(tasks[i].task_id),
-                        callback_data=ToDeleteTask(
-                            task_id=tasks[i].task_id
-                        ).pack()
-                    ),
-                    InlineKeyboardButton(
-                        text=str(tasks[i + 1].task_id),
-                        callback_data=ToDeleteTask(
-                            task_id=tasks[i + 1].task_id
-                        ).pack()
-                    )
-                ]
-                for i in range(0, len(tasks) - 1, 3)
+        kb = [
+            [
+                InlineKeyboardButton(
+                    text=str(tasks[i].task_id),
+                    callback_data=ToDeleteTask(
+                        task_id=tasks[i].task_id
+                    ).pack()
+                ),
+                InlineKeyboardButton(
+                    text=str(tasks[i + 1].task_id),
+                    callback_data=ToDeleteTask(
+                        task_id=tasks[i + 1].task_id
+                    ).pack()
+                )
             ]
+            for i in range(0, len(tasks) - 1, 3)
+        ]
+        kb.append([InlineKeyboardButton(
+            text="В главное меню",
+            callback_data=DeclineChanges().pack()
+        )])
+        return InlineKeyboardMarkup(
+            inline_keyboard=kb
         )
     else:
-        return InlineKeyboardMarkup(
-            inline_keyboard=[
+        kb = [
                 [
                     InlineKeyboardButton(
                         text=str(tasks[i].task_id),
@@ -236,5 +259,11 @@ def get_tasks_to_delete_kb(tasks: List[Task]):
                 ]
                 for i in range(0, len(tasks) - 1, 3)
             ]
+        kb.append([InlineKeyboardButton(
+            text="В главное меню",
+            callback_data=DeclineChanges().pack()
+        )])
+        return InlineKeyboardMarkup(
+            inline_keyboard=kb
         )
 

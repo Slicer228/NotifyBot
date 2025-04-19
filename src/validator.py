@@ -1,5 +1,6 @@
 import datetime
 
+from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup
 from pydantic import BaseModel
 from typing import Optional, Literal
 
@@ -29,3 +30,9 @@ class Task(BaseModel):
 class User(BaseModel):
     user_id: int
     username: Optional[str] = None
+
+
+class MessageObj(BaseModel):
+    chat_id: Optional[int] = None
+    text: Optional[str] = None
+    kb: Optional[InlineKeyboardMarkup] = None

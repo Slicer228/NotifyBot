@@ -2,8 +2,8 @@ from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from src.validator import User
-from src.routers.states import AddTask, GeneratedTask, DeclineChanges
+from src.validator import User, MessageObj
+from src.routers.states import AddTask, GeneratedTask, DeclineChanges, StartAddTask
 from src.routers.states import del_last_msg, check_state, DeclineChanges
 from src.routers.buttons import week_days_inline, get_minutes_kb, get_hours_kb, get_is_one_time_kb, main_menu_kb
 
@@ -13,68 +13,75 @@ _r = Router()
 
 def get_add_task_router(root: Bot) -> Router:
 
-    @_r.message(F.text == 'Добавить задачу')
+    @_r.callback_query(StartAddTask.filter())
     @check_state
     @del_last_msg(root)
-    async def add_task1(message: Message, state: FSMContext, *args, **kwargs):
+    async def add_task1(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.week_day)
-        msg = await message.answer("Выберите день недели", reply_markup=week_days_inline)
-        return msg.message_id
+        return MessageObj(
+            text="Выберите день недели",
+            kb=week_days_inline,
+            chat_id=cb.from_user.id,
+        )
 
     @_r.callback_query(AddTask.week_day)
     @del_last_msg(root)
     async def add_task2(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.hour)
-        msg = await root.send_message(
-            cb.from_user.id,
-            "Выберите нужный час",
-            reply_markup=get_hours_kb(GeneratedTask().unpack(cb.data))
+        return MessageObj(
+            text="Выберите нужный час",
+            kb=get_hours_kb(GeneratedTask().unpack(cb.data)),
+            chat_id=cb.from_user.id,
         )
-        return msg.message_id
 
     @_r.callback_query(AddTask.hour)
     @del_last_msg(root)
     async def add_task3(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.minute)
-        msg = await root.send_message(
-            cb.from_user.id,
-            "Выберите минуту",
-            reply_markup=get_minutes_kb(GeneratedTask().unpack(cb.data))
+        return MessageObj(
+            text="Выберите минуту",
+            kb=get_minutes_kb(GeneratedTask().unpack(cb.data)),
+            chat_id=cb.from_user.id,
         )
-        return msg.message_id
 
     @_r.callback_query(AddTask.minute)
     @del_last_msg(root)
     async def add_task4(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.is_one_time)
-        msg = await root.send_message(
-            cb.from_user.id,
-            "Это единоразовая задача?",
-            reply_markup=get_is_one_time_kb(GeneratedTask().unpack(cb.data))
+        return MessageObj(
+            text="Это единоразовая задача?",
+            kb=get_is_one_time_kb(GeneratedTask().unpack(cb.data)),
+            chat_id=cb.from_user.id,
         )
-        return msg.message_id
 
     @_r.callback_query(AddTask.is_one_time)
     @del_last_msg(root)
     async def add_task5(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.description)
-        msg = await root.send_message(
-            cb.from_user.id,
-            "Напишите в чат описание вашей задачи"
-        )
         await state.update_data(task=GeneratedTask().unpack(cb.data))
-        return msg.message_id
+        return MessageObj(
+            text="Напишите в чат описание вашей задачи",
+            chat_id=cb.from_user.id,
+        )
 
     @_r.message(AddTask.description)
     @del_last_msg(root)
     async def add_task6(message: Message, state: FSMContext, *args, **kwargs):
         if len(message.text) > 255:
-            msg = await message.answer("Слишком длинное описание!")
+            return MessageObj(
+                text="Слишком длинное описание!",
+                kb=main_menu_kb,
+                chat_id=message.from_user.id,
+            )
         else:
             task = (await state.get_data()).get('task', None)
             if not task:
-                msg = await message.answer("Что то пошло не так!")
                 await state.clear()
+                return MessageObj(
+                    text="Что то пошло не так!",
+                    kb=main_menu_kb,
+                    chat_id=message.from_user.id,
+                )
             else:
                 task.description = message.text
                 try:
@@ -85,11 +92,18 @@ def get_add_task_router(root: Bot) -> Router:
                         ),
                         task(message.from_user.id)
                     )
-                    msg = await message.answer('Ваша задача успешно добавлена!\nПереход в главное меню', reply_markup=main_menu_kb)
                     await state.clear()
+                    return MessageObj(
+                        text='Ваша задача успешно добавлена!\nПереход в главное меню',
+                        kb=main_menu_kb,
+                        chat_id=message.from_user.id,
+                    )
                 except Exception as e:
-                    msg = await message.answer('При добавлении задачи произошла ошибка!')
                     await state.clear()
-        return msg.message_id
+                    return MessageObj(
+                        text='При добавлении задачи произошла ошибка!',
+                        kb=main_menu_kb,
+                        chat_id=message.from_user.id,
+                    )
 
     return _r
