@@ -1,7 +1,6 @@
 from typing import Callable, List
 import asyncio
 from zoneinfo import ZoneInfo
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from src.db import DbFetcher
 from src.exc import InternalError
 from src.logger import Logger
