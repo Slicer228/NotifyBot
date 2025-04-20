@@ -1,7 +1,9 @@
 import asyncio
-from typing import Literal
+import signal
 import aiogram
 from aiogram import Dispatcher
+from aiogram.methods import DeleteWebhook
+
 from src.config import Config
 from src.db import DbFetcher
 from src.exc import InternalError
@@ -30,6 +32,7 @@ class Bot(aiogram.Bot):
         self.logger = logger
         self.cfg = cfg
         self.db = db
+        signal.signal(signal.SIGINT, tasker.kill_schedulers)
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -89,6 +92,7 @@ class Bot(aiogram.Bot):
     def run(self):
         async def launch(dp: Dispatcher):
             self._loop = asyncio.get_event_loop()
+            await self(DeleteWebhook(drop_pending_updates=True))
             self.logger.info('Starting bot...')
             await dp.start_polling(self, close_bot_session=True, skip_updates=True)
         self.init_routers()

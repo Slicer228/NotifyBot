@@ -2,7 +2,7 @@ from aiogram import Router, Bot, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from src.routers.buttons import main_menu_kb
-from src.routers.states import check_state, del_last_msg, ShowTasks
+from src.routers.states import check_state, edit_last_msg, ShowTasks, one_handler_in_time
 from src.validator import User, MessageObj
 
 
@@ -31,7 +31,8 @@ def get_task_router(root: Bot) -> Router:
 
     @_r.callback_query(ShowTasks.filter())
     @check_state
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def get_tasks(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         tasks = await root.tasker.get_task(User(
             user_id=cb.from_user.id,

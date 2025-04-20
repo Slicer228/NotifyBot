@@ -1,19 +1,23 @@
+import asyncio
 from typing import Optional
-
 from aiogram import Bot
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message
 from src.validator import Task, MessageObj
 
 
-def del_last_msg(bot: Bot):
+_LOCK = asyncio.Lock()
+
+
+def edit_last_msg(bot: Bot):
     def inner_decorator(func):
         async def wrapper(main_obj, state: FSMContext, *args, **kwargs):
             data = await state.get_data()
             last_msg_id = data.get("last_msg_id", None)
-            msg: MessageObj = await func(main_obj, state, *args, **kwargs)
+            msg: MessageObj | None = await func(main_obj, state, *args, **kwargs)
+            if msg is None:
+                return
             if last_msg_id:
                 try:
                     if msg.need_update:
@@ -56,6 +60,21 @@ def del_last_msg(bot: Bot):
 
         return wrapper
     return inner_decorator
+
+
+def one_handler_in_time(func):
+    async def wrapper(main_obj, state: FSMContext, *args, **kwargs):
+        async with _LOCK:
+            data = await state.get_data()
+            is_proceed = data.get('uid_' + str(main_obj.from_user.id), None)
+            if not is_proceed:
+                await eval(f'state.update_data(uid_{main_obj.from_user.id}=True)')
+        if not is_proceed:
+            res = await func(main_obj, state, *args, **kwargs)
+            await eval(f'state.update_data(uid_{main_obj.from_user.id}=False)')
+            return res
+
+    return wrapper
 
 
 def check_state(func):

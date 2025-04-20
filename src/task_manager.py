@@ -1,3 +1,4 @@
+import sys
 from typing import Callable, List
 import asyncio
 from zoneinfo import ZoneInfo
@@ -83,7 +84,7 @@ class UserTasker:
 
 def user_exists(func):
     async def wrapper(self, user: User, *args):
-        if not self._user_indexes.get(user.user_id, None):
+        if self._user_indexes.get(user.user_id, None) is None:
             await self.add_user(user)
         return await func(self, user, *args)
 
@@ -144,6 +145,7 @@ class UserTaskerFarm:
             self._callback_notify,
             await self._db.get_all_tasks(user.user_id)
         ))
+        self._user_indexes[user.user_id] = len(self._users) - 1
         self._users[-1].start_polling()
 
     @user_exists
@@ -164,6 +166,12 @@ class UserTaskerFarm:
     @user_exists
     async def get_task(self, user: User) -> List[Task]:
         return await self._db.get_all_tasks(user.user_id)
+
+    def kill_schedulers(self, *args, **kwargs):
+        self._scheduler.shutdown()
+        for user in self._users:
+            user._scheduler.shutdown()
+        sys.exit()
 
 
 

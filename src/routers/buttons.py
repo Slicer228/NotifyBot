@@ -236,29 +236,34 @@ def get_tasks_to_delete_kb(tasks: List[Task]):
             inline_keyboard=kb
         )
     else:
-        kb = [
-                [
+        kb = []
+        ct = 0
+        line = []
+        for task in tasks:
+            if ct < 3:
+                line.append(
                     InlineKeyboardButton(
-                        text=str(tasks[i].task_id),
+                        text=str(task.task_id),
                         callback_data=ToDeleteTask(
-                            task_id=tasks[i].task_id
+                            task_id=task.task_id
                         ).pack()
-                    ),
+                    )
+                )
+            else:
+                kb.append(line.copy())
+                line.clear()
+                line.append(
                     InlineKeyboardButton(
-                        text=str(tasks[i + 1].task_id),
+                        text=str(task.task_id),
                         callback_data=ToDeleteTask(
-                            task_id=tasks[i + 1].task_id
+                            task_id=task.task_id
                         ).pack()
-                    ),
-                    InlineKeyboardButton(
-                        text=str(tasks[i + 2].task_id),
-                        callback_data=ToDeleteTask(
-                            task_id=tasks[i + 2].task_id
-                        ).pack()
-                    ),
-                ]
-                for i in range(0, len(tasks) - 1, 3)
-            ]
+                    )
+                )
+                ct = 0
+            ct += 1
+        kb.append(line.copy())
+        line.clear()
         kb.append([InlineKeyboardButton(
             text="В главное меню",
             callback_data=DeclineChanges().pack()

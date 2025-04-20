@@ -1,21 +1,25 @@
+import asyncio
+
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from src.validator import User, MessageObj
-from src.routers.states import AddTask, GeneratedTask, DeclineChanges, StartAddTask
-from src.routers.states import del_last_msg, check_state, DeclineChanges
+from src.routers.states import AddTask, GeneratedTask, DeclineChanges, StartAddTask, one_handler_in_time
+from src.routers.states import edit_last_msg, check_state, DeclineChanges
 from src.routers.buttons import week_days_inline, get_minutes_kb, get_hours_kb, get_is_one_time_kb, main_menu_kb
 
 
 _r = Router()
+_LOCK = asyncio.Lock()
 
 
 def get_add_task_router(root: Bot) -> Router:
 
     @_r.callback_query(StartAddTask.filter())
     @check_state
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task1(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.week_day)
         return MessageObj(
@@ -25,7 +29,8 @@ def get_add_task_router(root: Bot) -> Router:
         )
 
     @_r.callback_query(AddTask.week_day)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task2(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.hour)
         return MessageObj(
@@ -35,7 +40,8 @@ def get_add_task_router(root: Bot) -> Router:
         )
 
     @_r.callback_query(AddTask.hour)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task3(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.minute)
         return MessageObj(
@@ -45,7 +51,8 @@ def get_add_task_router(root: Bot) -> Router:
         )
 
     @_r.callback_query(AddTask.minute)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task4(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.is_one_time)
         return MessageObj(
@@ -55,7 +62,8 @@ def get_add_task_router(root: Bot) -> Router:
         )
 
     @_r.callback_query(AddTask.is_one_time)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task5(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.set_state(AddTask.description)
         await state.update_data(task=GeneratedTask().unpack(cb.data))
@@ -65,7 +73,8 @@ def get_add_task_router(root: Bot) -> Router:
         )
 
     @_r.message(AddTask.description)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task6(message: Message, state: FSMContext, *args, **kwargs):
         if len(message.text) > 255:
             return MessageObj(

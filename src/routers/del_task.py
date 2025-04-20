@@ -2,7 +2,7 @@ from aiogram import Router, Bot, F
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from src.routers.buttons import main_menu_kb, get_tasks_to_delete_kb, get_decide_cb
-from src.routers.states import check_state, del_last_msg, DeleteTask, ToDeleteTask, StartDeleteTask
+from src.routers.states import check_state, edit_last_msg, DeleteTask, ToDeleteTask, StartDeleteTask, one_handler_in_time
 from src.validator import User, Task, MessageObj
 
 _r = Router()
@@ -11,7 +11,8 @@ _r = Router()
 def get_del_task_router(root: Bot) -> Router:
     @_r.callback_query(StartDeleteTask.filter())
     @check_state
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def add_task1(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         tasks = await root.tasker.get_task(User(
             user_id=cb.from_user.id,
@@ -32,7 +33,8 @@ def get_del_task_router(root: Bot) -> Router:
             )
 
     @_r.callback_query(DeleteTask.process)
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def del_task1(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         task = ToDeleteTask.unpack(cb.data)
         try:

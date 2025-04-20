@@ -2,7 +2,7 @@ from aiogram import Router, Bot
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from src.routers.states import del_last_msg, check_state, DeclineChanges
+from src.routers.states import edit_last_msg, check_state, DeclineChanges, one_handler_in_time
 from src.validator import User, MessageObj
 from src.routers.buttons import main_menu_kb
 
@@ -13,7 +13,8 @@ _r = Router()
 def get_primary_router(root: Bot) -> Router:
     @_r.message(Command('start'))
     @check_state
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def start(message: Message, *args, **kwargs):
         try:
             await root.tasker.add_user(User(
@@ -34,7 +35,8 @@ def get_primary_router(root: Bot) -> Router:
 
     @_r.message(Command('help'))
     @check_state
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def help(message: Message, *args, **kwargs):
         return MessageObj(
             text='Help msg',
@@ -43,7 +45,8 @@ def get_primary_router(root: Bot) -> Router:
         )
 
     @_r.callback_query(DeclineChanges.filter())
-    @del_last_msg(root)
+    @edit_last_msg(root)
+    @one_handler_in_time
     async def decline(cb: CallbackQuery, state: FSMContext, *args, **kwargs):
         await state.clear()
         return MessageObj(
