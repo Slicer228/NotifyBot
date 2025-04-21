@@ -25,7 +25,7 @@ class UserTasker:
         self._scheduler.add_job(
             self._callback,
             'cron',
-            [self._user.user_id, task, 2],
+            [self._user.user_id, task, 0],
             id=f"{task.task_id}_l1",
             hour=8,
             minute=0,
@@ -34,7 +34,7 @@ class UserTasker:
         self._scheduler.add_job(
             self._callback,
             'cron',
-            [self._user.user_id, task, 2],
+            [self._user.user_id, task, 1],
             id=f"{task.task_id}_l2",
             hour=task.hours-1,
             minute=task.minutes,
